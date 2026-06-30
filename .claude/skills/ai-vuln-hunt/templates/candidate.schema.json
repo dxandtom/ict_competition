@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VulnHunt LLM candidate",
+  "description": "A suspected vulnerability emitted by the LLM semantic-SAST reviewer. A candidate is a HYPOTHESIS; only the PoC phase may set status to confirmed.",
+  "type": "object",
+  "required": ["candidate_id", "file", "line", "sink_class", "taint_path", "trigger_hypothesis", "poc_oracle", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {"type": "string", "pattern": "^C[0-9]{3,}$"},
+    "source_lead": {"type": "string", "description": "originating SAST lead_id, or 'discovery'"},
+    "file": {"type": "string"},
+    "line": {"type": "integer", "minimum": 0},
+    "sink_class": {
+      "type": "string",
+      "enum": ["oob_rw", "use_after_free", "uninit", "int_overflow", "narrowing_sign",
+                "deser", "proto_graph", "injection", "ssrf", "path_traversal",
+                "weak_crypto", "availability", "contract", "other"]
+    },
+    "cwe": {"type": "string"},
+    "entry_point": {"type": "string", "description": "reachable public API / parse boundary"},
+    "taint_path": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "required": ["file", "line", "note"],
+                "properties": {"file": {"type": "string"}, "line": {"type": "integer"},
+                               "note": {"type": "string"}}}
+    },
+    "missing_check": {"type": "string", "description": "the bounds/validation that is absent"},
+    "trigger_hypothesis": {
+      "type": "object",
+      "required": ["description", "concrete_input"],
+      "properties": {
+        "description": {"type": "string"},
+        "concrete_input": {"type": "string", "description": "literal-valued input that should trip the bug"}
+      }
+    },
+    "poc_oracle": {
+      "type": "string",
+      "description": "Predicted machine oracle. MUST use the same vocabulary triage_crash.sh emits as evidence_type, so the PoC's observed oracle can be auto-checked against this prediction.",
+      "enum": ["asan", "ubsan", "msan", "signal_segv", "signal_fpe", "abort", "check_assert",
+                "uncaught_exception", "invariant_violation", "differential_mismatch",
+                "metamorphic_violation"]
+    },
+    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+    "status": {"type": "string", "enum": ["candidate", "refuted", "confirmed", "unconfirmed"]},
+    "notes": {"type": "string"}
+  }
+}

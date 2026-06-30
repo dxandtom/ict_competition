@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VulnHunt confirmed finding",
+  "description": "A vulnerability finding. status MUST be CONFIRMED only when a PoC + oracle evidence exists; otherwise UNCONFIRMED and quarantined.",
+  "type": "object",
+  "required": ["schema", "id", "title", "sink_class", "severity", "status"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "finding-1.0"},
+    "id": {"type": "string", "pattern": "^VH-[0-9]{4}$"},
+    "title": {"type": "string"},
+    "sink_class": {"type": "string"},
+    "cwe": {"type": "string"},
+    "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]},
+    "status": {"type": "string", "enum": ["CONFIRMED", "UNCONFIRMED"]},
+    "file": {"type": "string"},
+    "line": {"type": "integer"},
+    "entry_point": {"type": "string"},
+    "taint_path": {"type": "array", "items": {"type": "object"}},
+    "missing_check": {"type": "string"},
+    "poc": {
+      "type": "object",
+      "required": ["path", "kind"],
+      "properties": {
+        "path": {"type": "string", "description": "AI-generated reproducer (relative to finding dir)"},
+        "kind": {"type": "string", "enum": ["atheris", "libfuzzer", "pytest", "property", "standalone", ""]}
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "deterministic run logs (>=1 required for CONFIRMED) proving the oracle fires",
+      "items": {"type": "string"}
+    },
+    "oracle": {
+      "type": "object",
+      "description": "triage_crash.sh output; oracle.confirmed must be true for CONFIRMED",
+      "properties": {
+        "evidence_type": {"type": "string"},
+        "signature": {"type": "string"},
+        "stack_hash": {"type": "string"},
+        "requires_native_frame": {"type": "boolean"},
+        "has_code_frame": {"type": "boolean"},
+        "confirmed": {"type": "boolean"}
+      }
+    },
+    "cited_kernel": {"type": "string",
+      "description": "code/file:line of the kernel under test; REQUIRED for contract oracles (invariant/differential/metamorphic) since they have no native frame"},
+    "failing_input": {"type": "string",
+      "description": "path to the recorded minimal failing input / regression seed the PoC replays"},
+    "stubbed_symbols": {"type": "array", "items": {"type": "string"},
+      "description": "for libfuzzer single-unit builds: symbols replaced by weak stubs. NONE may lie on taint_path."},
+    "needs_real_build_confirmation": {"type": "boolean",
+      "description": "true if the PoC was produced against a stubbed/partial build and not yet re-confirmed against the real build"},
+    "cvss": {"type": "object",
+      "properties": {"score": {"type": "number"}, "vector": {"type": "string"}}},
+    "references": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "CONFIRMED"}}},
+      "then": {
+        "required": ["poc", "evidence", "oracle"],
+        "properties": {
+          "evidence": {"minItems": 1},
+          "oracle": {"required": ["confirmed"],
+                     "properties": {"confirmed": {"const": true}}}
+        }
+      }
+    }
+  ]
+}
