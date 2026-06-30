@@ -1,0 +1,16 @@
+# Target codebase (the black-box under test) is added at runtime, not committed.
+/code/
+# Generated audit trail / proof packages / reports.
+/findings/
+# SCA tool install + offline DB.
+/.sca/
+# Python / build artifacts.
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+bazel-*
+# Scratch.
+*.min
+*.swp
+.DS_Store

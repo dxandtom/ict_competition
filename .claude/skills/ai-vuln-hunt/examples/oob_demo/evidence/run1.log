@@ -1,0 +1,50 @@
+=================================================================
+==18311==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fe4c6f00034 at pc 0x55adc2a9433b bp 0x7ffe04e72470 sp 0x7ffe04e72460
+WRITE of size 1 at 0x7fe4c6f00034 thread T0
+    #0 0x55adc2a9433a in write_at <WORKDIR>/code/vuln.c:3
+    #1 0x55adc2a943ed in parse_and_store <WORKDIR>/code/vuln.c:6
+    #2 0x55adc2a9427a in main <WORKDIR>/poc.c:2
+    #3 0x7fe4c942a1c9 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #4 0x7fe4c942a28a in __libc_start_main_impl ../csu/libc-start.c:360
+    #5 0x55adc2a941a4 in _start (<WORKDIR>/poc+0x11a4) (BuildId: 978ffe7d22eff5fdab10cf1e45607c10e0e55f02)
+
+Address 0x7fe4c6f00034 is located in stack of thread T0 at offset 52 in frame
+    #0 0x55adc2a94357 in parse_and_store <WORKDIR>/code/vuln.c:4
+
+  This frame has 1 object(s):
+    [32, 48) 'buf' (line 5) <== Memory access at offset 52 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow <WORKDIR>/code/vuln.c:3 in write_at
+Shadow bytes around the buggy address:
+  0x7fe4c6effd80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6effe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6effe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6efff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6efff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x7fe4c6f00000: f1 f1 f1 f1 00 00[f3]f3 00 00 00 00 00 00 00 00
+  0x7fe4c6f00080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6f00100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6f00180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6f00200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7fe4c6f00280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==18311==ABORTING
