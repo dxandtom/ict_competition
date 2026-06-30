@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# new_finding.sh — scaffold a findings/<id>/ proof package from the template.
+# new_finding.sh — 从模板生成 findings/<id>/ 证明包脚手架。
 #
-# Layout per finding:
+# 每个发现的目录结构：
 #   <findings>/findings/VH-NNNN/
-#     finding.md        (from templates/finding.md, fields filled)
-#     finding.json      (conforms to templates/finding.schema.json)
-#     poc.{py,cc,bin}   (AI-generated reproducer — you add it)
-#     run.sh            (one-command repro)
-#     evidence/         (3 deterministic run logs proving the oracle fires)
-#     oracle.json       (triage output from triage_crash.sh)
+#     finding.md        （由 templates/finding.md 生成，字段已填充）
+#     finding.json      （符合 templates/finding.schema.json）
+#     poc.{py,cc,bin}   （AI 生成的复现器——由你添加）
+#     run.sh            （一条命令完成复现）
+#     evidence/         （3 条确定性运行日志，证明 oracle 触发）
+#     oracle.json       （来自 triage_crash.sh 的分类输出）
 #
-# A finding without poc + >=1 evidence log + oracle.confirmed==true stays UNCONFIRMED
-# and is moved to <findings>/unconfirmed/.
+# 缺少 poc、至少 1 条 evidence 日志或 oracle.confirmed==true 的发现将保持为 UNCONFIRMED 状态，
+# 并被移动到 <findings>/unconfirmed/。
 #
-# Usage: new_finding.sh <findings_dir> [--title T] [--sink S] [--severity SEV]
+# 用法： new_finding.sh <findings_dir> [--title T] [--sink S] [--severity SEV]
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SKILL="$(cd "$HERE/.." && pwd)"
@@ -28,7 +28,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 mkdir -p "$FIND/findings"
-# Next id
+# 下一个 id
 N=1
 while [ -d "$FIND/findings/VH-$(printf '%04d' "$N")" ]; do N=$((N+1)); done
 ID="VH-$(printf '%04d' "$N")"
@@ -54,10 +54,10 @@ jq -n --arg id "$ID" --arg title "$TITLE" --arg sink "$SINK" --arg sev "$SEV" \
 
 cat > "$DIR/run.sh" <<'EOF'
 #!/usr/bin/env bash
-# One-command repro for this finding. Fill in after you author the PoC.
+# 此发现的一条命令复现脚本。在编写完 PoC 后填写此处。
 set -euo pipefail
 cd "$(dirname "$0")"
-echo "TODO: invoke poc and assert the oracle fires (see finding.md)"
+echo "TODO: 调用 poc 并断言 oracle 触发（见 finding.md）"
 EOF
 chmod +x "$DIR/run.sh"
 

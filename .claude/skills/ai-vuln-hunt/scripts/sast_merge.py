@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""sast_merge.py — normalize all SAST dialects to one schema, de-dup, and rank.
+"""sast_merge.py — 将所有 SAST 工具的不同输出格式归一化为统一 schema，去重并排序。
 
-Reads bandit.json, ruff.json, semgrep_*.sarif, flawfinder.sarif, cppcheck.xml,
-clang-tidy.txt from <raw_dir>. De-dups by (file, line +/-2, sink_class). Ranks by
-severity x cross-tool-agreement x sink-class-weight.
+从 <raw_dir> 读取 bandit.json、ruff.json、semgrep_*.sarif、flawfinder.sarif、cppcheck.xml、
+clang-tidy.txt。按 (file, line +/-2, sink_class) 去重。按
+严重度 x 跨工具一致性 x sink 类别权重 进行排序。
 
-Sink classes align with templates/sink_taxonomy.md. NOTE: memory-corruption patterns
-are matched BEFORE the generic int_overflow pattern, and int_overflow requires a
-*qualified* overflow ("integer overflow"/"signed overflow"), so "buffer overflow" is
-correctly bucketed as memory-safety, not int_overflow.
+sink 类别与 templates/sink_taxonomy.md 保持一致。注意：内存破坏类模式
+会在通用 int_overflow 模式之前匹配，且 int_overflow 要求带有
+*限定词* 的溢出（"integer overflow"/"signed overflow"），因此 "buffer overflow" 会被
+正确归入内存安全类，而非 int_overflow。
 
-Usage: sast_merge.py <raw_dir> > leads.json
+用法：sast_merge.py <raw_dir> > leads.json
 """
 import json, sys, os, glob, re
 import xml.etree.ElementTree as ET
 
-# Ordered: specific memory-corruption first, qualified int-overflow later.
+# 有序排列：先匹配具体的内存破坏类，再匹配带限定词的整数溢出类。
 SINK_PATTERNS = [
     ("oob_rw",        re.compile(r"out.?of.?bounds|buffer overflow|heap overflow|stack overflow|oob|index out of range", re.I)),
     ("use_after_free",re.compile(r"use.after.free|double free|dangling", re.I)),

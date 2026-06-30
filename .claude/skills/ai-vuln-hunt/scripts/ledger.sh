@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# ledger.sh — append-only, hash-chained reproducibility ledger + env manifest.
+# ledger.sh — 仅追加、哈希链式的可复现性账本 + 环境清单。
 #
-# BLACK-BOX NOTE: This script records the AI interaction process. It never reads
-# host-identity files (VERSION/CHANGELOG/RELEASE/SECURITY/NOTICE/AUTHORS/.git tags).
-# Large blobs are content-addressed (stored under findings/blobs/<sha256>) and only
-# their sha256 is inlined, so the ledger stays small on a multi-MLOC target.
+# 黑盒说明：本脚本记录 AI 交互过程。它从不读取宿主身份文件
+# （VERSION/CHANGELOG/RELEASE/SECURITY/NOTICE/AUTHORS/.git 标签）。
+# 大型数据块按内容寻址（存储在 findings/blobs/<sha256> 下），账本中只内联
+# 其 sha256，因此在多兆行（multi-MLOC）目标上账本仍保持很小。
 #
-# Usage:
+# 用法：
 #   ledger.sh init  <findings_dir> <code_dir>
 #   ledger.sh append <findings_dir> --phase P --actor A --kind K [--lens L] \
 #                    [--summary S] [--blob FILE]... [--kv key=val]...
 #   ledger.sh verify <findings_dir>
 #
-# Every other script in this skill calls `ledger.sh append` for each tool_call.
+# 本技能中的每个其他脚本都会对每次 tool_call 调用 `ledger.sh append`。
 set -euo pipefail
 
 sha256() { sha256sum "$1" | awk '{print $1}'; }
@@ -20,7 +20,7 @@ sha256_str() { printf '%s' "$1" | sha256sum | awk '{print $1}'; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 die() { echo "ledger.sh: $*" >&2; exit 2; }
-need_jq() { command -v jq >/dev/null 2>&1 || die "jq is required"; }
+need_jq() { command -v jq >/dev/null 2>&1 || die "需要 jq"; }
 
 cmd="${1:-}"; shift || true
 need_jq
@@ -31,9 +31,9 @@ init)
   mkdir -p "$FIND/blobs" "$FIND/raw" "$FIND/candidates" "$FIND/sbom" "$FIND/findings" "$FIND/unconfirmed"
   LED="$FIND/ledger.jsonl"
   [ -f "$LED" ] || : > "$LED"
-  # Content-identity of the target: hash a manifest of SOURCE files only — never read binaries,
-  # build dirs, datasets, or host-identity files (those are excluded by the extension allowlist
-  # and recorded by path only). Streamed + parallel + time-boxed so it scales to multi-GB trees.
+  # 目标的内容身份：仅对源文件清单做哈希——绝不读取二进制文件、
+  # 构建目录、数据集或宿主身份文件（这些被扩展名白名单排除，
+  # 仅按路径记录）。流式 + 并行 + 限时处理，因此可扩展到多 GB 的目录树。
   MANIFEST="$FIND/target_tree_manifest.txt"
   : > "$MANIFEST"
   ( cd "$CODE" && timeout 600 bash -c '
@@ -51,7 +51,7 @@ init)
       | sed "s#  \./#  #"' ) | sort > "$MANIFEST" || true
   TREE="$(sha256sum "$MANIFEST" | awk '{print $1}')"
   FILE_COUNT="$(wc -l < "$MANIFEST" | tr -d ' ')"
-  # Record host-identity files by PATH ONLY (never read/hash their contents).
+  # 仅按路径记录宿主身份文件（绝不读取/哈希其内容）。
   ID_FILES="$(cd "$CODE" && find . -maxdepth 2 -type f ! -path '*/third_party/*' \
       ! -path '*/external/*' ! -path '*/vendor/*' \
       \( -iname 'VERSION' -o -iname 'VERSION.*' -o -iname 'version.bazel' -o -iname 'CHANGELOG*' \
@@ -62,8 +62,8 @@ init)
   [ -n "$ID_FILES" ] || ID_FILES='[]'
   SESSION="$(sha256_str "$(now)-$$-$RANDOM")"
   MAN="$FIND/env_manifest.json"
-  # Model id is pinned for the record but the run does NOT claim bit-reproducible LLM output:
-  # see env_manifest.reproducibility_note. Override the recorded id via AIVH_MODEL.
+  # 模型 id 已为本记录固定，但本次运行并不声称 LLM 输出可按位复现：
+  # 参见 env_manifest.reproducibility_note。可通过 AIVH_MODEL 覆盖所记录的 id。
   MODEL_ID="${AIVH_MODEL:-unset-record-actual-model-id-here}"
   toolver() { command -v "$1" >/dev/null 2>&1 && { "$@" 2>&1 | head -1; } || echo "absent"; }
   jq -n \
@@ -89,12 +89,12 @@ init)
       reproducibility_note:"Tool inputs/outputs are content-addressed and replay deterministically. LLM calls are NOT bit-reproducible (no exposed sampling seed) but are fully logged (prompt+response blobs by sha256) and re-runnable; findings are PoC-gated, so a confirmed bug reproduces deterministically via its PoC regardless of which LLM run surfaced it.",
       identity_files_seen_but_unread:$idfiles}' > "$MAN"
   echo "$SESSION" > "$FIND/.session_id"
-  echo "initialized ledger at $LED (session $SESSION, tree $TREE)"
+  echo "已在 $LED 初始化账本（会话 $SESSION，目录树 $TREE）"
   ;;
 
 append)
   FIND="${1:?findings_dir}"; shift
-  LED="$FIND/ledger.jsonl"; [ -f "$LED" ] || die "run 'ledger.sh init' first"
+  LED="$FIND/ledger.jsonl"; [ -f "$LED" ] || die "请先运行 'ledger.sh init'"
   SESSION="$(cat "$FIND/.session_id" 2>/dev/null || echo unknown)"
   PHASE=""; ACTOR=""; KIND="note"; LENS=""; SUMMARY=""
   BLOBS="[]"; KV="{}"
@@ -107,26 +107,26 @@ append)
       --summary) SUMMARY="$2"; shift 2;;
       --blob)
         f="$2"; shift 2
-        [ -f "$f" ] || { echo "ledger.sh: blob not found: $f" >&2; continue; }
+        [ -f "$f" ] || { echo "ledger.sh: 未找到数据块：$f" >&2; continue; }
         h="$(sha256 "$f")"; dst="$FIND/blobs/$h"
         if [ -e "$dst" ]; then
-          [ "$(sha256 "$dst")" = "$h" ] || echo "ledger.sh: WARN blob hash collision at $dst" >&2
+          [ "$(sha256 "$dst")" = "$h" ] || echo "ledger.sh: 警告 在 $dst 处发生数据块哈希冲突" >&2
         else cp "$f" "$dst" 2>/dev/null || true; fi
         BLOBS="$(echo "$BLOBS" | jq --arg p "$f" --arg h "$h" '. + [{path:$p, sha256:$h}]')"
         ;;
       --kv) k="${2%%=*}"; v="${2#*=}"; shift 2
         KV="$(echo "$KV" | jq --arg k "$k" --arg v "$v" '.[$k]=$v')";;
-      *) die "unknown arg: $1";;
+      *) die "未知参数：$1";;
     esac
   done
-  # Black-box guard the summary before committing it to the permanent record.
+  # 在将摘要提交到永久记录之前，对其进行黑盒守护检查。
   GUARD="ok"
   if [ -x "$(dirname "$0")/blackbox_guard.sh" ] && [ -n "$SUMMARY" ]; then
     if ! printf '%s' "$SUMMARY" | "$(dirname "$0")/blackbox_guard.sh" scan-stdin >/dev/null 2>&1; then
       GUARD="leak_blocked"; SUMMARY="[REDACTED: black-box guard blocked identity-revealing text]"
     fi
   fi
-  # Read-modify-append must be atomic: parallel SCA/SAST stages each append concurrently.
+  # 读取-修改-追加必须是原子操作：并行的 SCA/SAST 阶段各自并发追加。
   exec 9>"$LED.lock"
   if command -v flock >/dev/null 2>&1; then flock 9; fi
   PREV_CHAIN="$(tail -1 "$LED" 2>/dev/null | jq -r '.chain_sha256 // ""' 2>/dev/null || echo "")"
@@ -152,7 +152,7 @@ append)
 
 verify)
   FIND="${1:?findings_dir}"; LED="$FIND/ledger.jsonl"
-  [ -f "$LED" ] || die "no ledger"
+  [ -f "$LED" ] || die "无账本"
   prev=""; n=0; bad=0
   while IFS= read -r line; do
     n=$((n+1))
@@ -162,12 +162,12 @@ verify)
     want_csha="$(echo "$line" | jq -r '.chain_sha256')"
     csha="$(sha256_str "${prev}${psha}")"
     if [ "$psha" != "$want_psha" ] || [ "$csha" != "$want_csha" ]; then
-      echo "TAMPER at record $n (seq $(echo "$line" | jq -r .seq))" >&2; bad=1; break
+      echo "TAMPER 于记录 $n（seq $(echo "$line" | jq -r .seq)）" >&2; bad=1; break
     fi
     prev="$want_csha"
   done < "$LED"
-  if [ "$bad" = 0 ]; then echo "OK: $n records, chain intact"; else exit 1; fi
+  if [ "$bad" = 0 ]; then echo "OK：$n 条记录，链完整"; else exit 1; fi
   ;;
 
-*) die "usage: ledger.sh {init|append|verify} ...";;
+*) die "用法：ledger.sh {init|append|verify} ...";;
 esac

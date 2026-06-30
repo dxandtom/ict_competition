@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
-# confirm_finding.sh — the ENFORCED proof gate. No finding becomes/stays CONFIRMED unless it
-# passes this. "No PoC, no bug" is enforced here, not merely documented.
+# confirm_finding.sh —强制的证据门禁。任何 finding 只有通过此检查才能成为/保持 CONFIRMED 状态。
+# “没有 PoC，就没有 bug”这条规则在此强制执行，而非仅停留在文档层面。
 #
-# For a finding whose finding.json says status=CONFIRMED it checks:
-#   1. finding.json validates against templates/finding.schema.json (jsonschema if available,
-#      else a built-in structural check).
-#   2. poc.path exists; >=3 evidence logs exist (the "deterministic 3x" requirement).
-#   3. Re-runs triage_crash.sh on EVERY evidence log and requires all of them to reproduce the
-#      SAME oracle (evidence_type), and — for native oracles — the SAME stack_hash. This is the
-#      real reproduction proof, independent of the recorded oracle.json.
-#   4. oracle.confirmed == true.
-#   5. Class-specific:
-#        memory/signal/abort/check  -> oracle.has_code_frame == true (crash is inside code/,
-#                                      not a harness-only artifact).
-#        contract (invariant/diff/  -> cited_kernel != "" AND failing_input file exists
-#          metamorphic)                (these oracles have no native frame; gated on this instead).
-#        stubbed single-unit build  -> if stubbed_symbols non-empty then
-#                                      needs_real_build_confirmation == false (re-confirmed on real build).
+# 对于 finding.json 中 status=CONFIRMED 的 finding，它会检查：
+#   1. finding.json 通过 templates/finding.schema.json 校验（若可用则使用 jsonschema，
+#      否则使用内置的结构性检查）。
+#   2. poc.path 存在；存在 >=3 条证据日志（即“确定性 3 次”要求）。
+#   3. 对每一条证据日志重新运行 triage_crash.sh，并要求它们全部复现出
+#      相同的 oracle（evidence_type），并且——对于原生 oracle——具有相同的 stack_hash。
+#      这是真正的复现证明，独立于已记录的 oracle.json。
+#   4. oracle.confirmed == true。
+#   5. 分类专属检查：
+#        memory/signal/abort/check  -> oracle.has_code_frame == true（崩溃发生在 code/ 内部，
+#                                      而非仅是 harness 自身的产物）。
+#        contract (invariant/diff/  -> cited_kernel != "" 且 failing_input 文件存在
+#          metamorphic)                （这些 oracle 没有原生帧，改为以此为门禁条件）。
+#        stubbed single-unit build  -> 若 stubbed_symbols 非空，则要求
+#                                      needs_real_build_confirmation == false（已在真实构建上重新确认）。
 #
-# Anything failing => the finding is DEMOTED to UNCONFIRMED (status rewritten + moved to
-# unconfirmed/) and the script exits non-zero. `gate-all` exits non-zero if ANY CONFIRMED
-# finding fails — wire it into REPORT generation so a bad finding can never be published.
+# 任何一项失败 => 该 finding 被降级为 UNCONFIRMED（重写 status 并移动到
+# unconfirmed/），脚本以非零状态退出。只要有任一 CONFIRMED finding 失败，`gate-all`
+# 就以非零退出——将其接入 REPORT 生成流程，使得有问题的 finding 永远无法被发布。
 #
-# Usage:
-#   confirm_finding.sh validate <finding_dir>            # check & demote on failure
+# 用法：
+#   confirm_finding.sh validate <finding_dir>            # 检查，失败则降级
 #   confirm_finding.sh gate-all <findings_dir> [--strict-demote]
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SKILL="$(cd "$HERE/.." && pwd)"
 SCHEMA="$SKILL/templates/finding.schema.json"
-command -v jq >/dev/null 2>&1 || { echo "confirm_finding.sh: jq required" >&2; exit 2; }
+command -v jq >/dev/null 2>&1 || { echo "confirm_finding.sh: 需要 jq" >&2; exit 2; }
 
-schema_validate() { # $1=finding.json  -> 0 ok, 1 invalid, 2 no validator (treated as soft-ok)
+schema_validate() { # $1=finding.json  -> 0 通过, 1 无效, 2 无校验器（视为软性通过）
   local fj="$1"
   if command -v check-jsonschema >/dev/null 2>&1; then
     check-jsonschema --schemafile "$SCHEMA" "$fj" >/dev/null 2>&1 && return 0 || return 1
@@ -43,7 +43,7 @@ s=json.load(open(sys.argv[1])); d=json.load(open(sys.argv[2]))
 jsonschema.validate(d,s)
 PY
   fi
-  # Built-in structural fallback (no jsonschema installed): enforce the CONFIRMED conditional.
+  # 内置结构性回退（未安装 jsonschema 时）：强制执行 CONFIRMED 的条件约束。
   python3 - "$fj" <<'PY' >/dev/null 2>&1 && return 0 || return 1
 import json,sys
 d=json.load(open(sys.argv[1]))
@@ -58,15 +58,15 @@ PY
 
 validate_one() { # $1=finding_dir
   local DIR="$1" FJ; FJ="$DIR/finding.json"
-  [ -f "$FJ" ] || { echo "[confirm] no finding.json in $DIR" >&2; return 2; }
+  [ -f "$FJ" ] || { echo "[confirm] $DIR 中没有 finding.json" >&2; return 2; }
   local status; status="$(jq -r '.status // "UNCONFIRMED"' "$FJ")"
   local FIND_ROOT; FIND_ROOT="$(cd "$DIR/../.." && pwd)"  # findings/
   led(){ [ -x "$HERE/ledger.sh" ] && "$HERE/ledger.sh" append "$FIND_ROOT" --phase confirm \
          --actor confirm_finding.sh "$@" >/dev/null 2>&1 || true; }
 
   if [ "$status" != "CONFIRMED" ]; then
-    schema_validate "$FJ" || { echo "[confirm] $DIR: UNCONFIRMED but schema-invalid" >&2; return 1; }
-    echo "[confirm] $(basename "$DIR"): UNCONFIRMED (ok, not published)"; return 0
+    schema_validate "$FJ" || { echo "[confirm] $DIR: UNCONFIRMED 但 schema 无效" >&2; return 1; }
+    echo "[confirm] $(basename "$DIR"): UNCONFIRMED（正常，未发布）"; return 0
   fi
 
   local reasons=()
@@ -75,7 +75,7 @@ validate_one() { # $1=finding_dir
   local poc; poc="$(jq -r '.poc.path // ""' "$FJ")"
   [ -n "$poc" ] && [ -e "$DIR/$poc" -o -e "$poc" ] || reasons+=("poc-missing:$poc")
 
-  # evidence logs (>=3 for deterministic reproduction)
+  # 证据日志（确定性复现需要 >=3 条）
   mapfile -t evs < <(jq -r '.evidence[]? // empty' "$FJ")
   if [ "${#evs[@]}" -lt 3 ]; then reasons+=("need>=3-evidence-logs(have ${#evs[@]})"); fi
 
@@ -86,7 +86,7 @@ validate_one() { # $1=finding_dir
   codeframe="$(jq -r '.oracle.has_code_frame // false' "$FJ")"
   [ "$(jq -r '.oracle.confirmed // false' "$FJ")" = "true" ] || reasons+=("oracle.confirmed!=true")
 
-  # Re-triage every evidence log => independent reproduction proof.
+  # 重新 triage 每一条证据日志 => 独立的复现证明。
   local matched=0 i=0
   for e in "${evs[@]}"; do
     local p="$DIR/$e"; [ -f "$p" ] || p="$e"
@@ -103,7 +103,7 @@ validate_one() { # $1=finding_dir
   done
   [ "$matched" -ge 3 ] || reasons+=("only $matched/3 evidence logs reproduce the oracle")
 
-  # Class-specific gates
+  # 分类专属门禁
   case "$want_ev" in
     invariant_violation|differential_mismatch|metamorphic_violation)
       local ck fi_; ck="$(jq -r '.cited_kernel // ""' "$FJ")"; fi_="$(jq -r '.failing_input // ""' "$FJ")"
@@ -115,7 +115,7 @@ validate_one() { # $1=finding_dir
       ;;
   esac
 
-  # Stubbed single-unit build must be re-confirmed against the real build.
+  # 使用桩的单元构建必须在真实构建上重新确认。
   local nstubs needreal
   nstubs="$(jq -r '(.stubbed_symbols // []) | length' "$FJ")"
   needreal="$(jq -r '.needs_real_build_confirmation // false' "$FJ")"
@@ -124,12 +124,12 @@ validate_one() { # $1=finding_dir
   fi
 
   if [ "${#reasons[@]}" -eq 0 ]; then
-    echo "[confirm] $(basename "$DIR"): CONFIRMED ✓ ($matched/${#evs[@]} logs reproduce '$want_ev')"
+    echo "[confirm] $(basename "$DIR"): CONFIRMED ✓（$matched/${#evs[@]} 条日志复现了 '$want_ev'）"
     led --kind decision --summary "confirmed $(basename "$DIR") oracle=$want_ev"
     return 0
   fi
 
-  echo "[confirm] $(basename "$DIR"): DEMOTED to UNCONFIRMED:" >&2
+  echo "[confirm] $(basename "$DIR"): 已降级为 UNCONFIRMED：" >&2
   printf '   - %s\n' "${reasons[@]}" >&2
   tmp="$(mktemp)"; jq '.status="UNCONFIRMED" | .notes=((.notes // "")+" [demoted by confirm_finding.sh: '"$(printf '%s; ' "${reasons[@]}" | sed "s/[\"']//g")"']")' "$FJ" > "$tmp" && mv "$tmp" "$FJ"
   mkdir -p "$FIND_ROOT/unconfirmed"
@@ -139,13 +139,13 @@ validate_one() { # $1=finding_dir
 }
 
 case "${1:-}" in
-  validate) shift; validate_one "${1:?usage: confirm_finding.sh validate <finding_dir>}";;
+  validate) shift; validate_one "${1:?用法: confirm_finding.sh validate <finding_dir>}";;
   gate-all)
-    shift; ROOT="${1:?usage: confirm_finding.sh gate-all <findings_dir>}"
+    shift; ROOT="${1:?用法: confirm_finding.sh gate-all <findings_dir>}"
     rc=0
     for d in "$ROOT/findings"/VH-*; do [ -d "$d" ] || continue; validate_one "$d" || rc=1; done
-    if [ "$rc" = 0 ]; then echo "[confirm] gate-all: all CONFIRMED findings pass the proof gate";
-    else echo "[confirm] gate-all: some findings failed and were demoted" >&2; fi
+    if [ "$rc" = 0 ]; then echo "[confirm] gate-all: 所有 CONFIRMED finding 均通过证据门禁";
+    else echo "[confirm] gate-all: 部分 finding 未通过并已被降级" >&2; fi
     exit $rc;;
-  *) echo "usage: confirm_finding.sh {validate <finding_dir>|gate-all <findings_dir>}" >&2; exit 2;;
+  *) echo "用法: confirm_finding.sh {validate <finding_dir>|gate-all <findings_dir>}" >&2; exit 2;;
 esac

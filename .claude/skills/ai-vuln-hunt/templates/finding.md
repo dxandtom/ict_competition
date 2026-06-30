@@ -1,43 +1,39 @@
 # {{ID}} — {{TITLE}}
 
-- **Status:** UNCONFIRMED  <!-- becomes CONFIRMED only after PoC + oracle evidence -->
+- **Status:** UNCONFIRMED  <!-- 仅在获得 PoC + oracle 证据后才变为 CONFIRMED -->
 - **Sink class:** {{SINK}}
 - **Severity:** {{SEVERITY}}
 - **CWE:** TBD
 - **Location:** `code/<file>:<line>`
 
-## Summary
-One paragraph: what the defect is, in code terms, with no reference to project
-identity or version. State the violated invariant or the memory-safety rule broken.
+## 摘要
+用一段话说明：以代码层面描述缺陷是什么，不涉及项目身份或版本。陈述被违反的不变量或被破坏的内存安全规则。
 
-## Entry point and reachability
-- Public API / parse boundary an external caller can reach:
-- Why the tainted value flows from there to the sink (black-box reasoning):
+## 入口点与可达性
+- 外部调用者可以到达的公共 API / 解析边界：
+- 受污染的值为何会从那里流向 sink（黑盒推理）：
 
-## Taint path
-1. `code/<file>:<line>` — value enters / is read
-2. `code/<file>:<line>` — propagated / arithmetic that overflows or skips a check
-3. `code/<file>:<line>` — **sink**: the missing bounds/validation here
+## 污点路径
+1. `code/<file>:<line>` — 值进入 / 被读取
+2. `code/<file>:<line>` — 被传播 / 发生溢出或跳过检查的算术运算
+3. `code/<file>:<line>` — **sink**：此处缺失的边界 / 校验
 
-## Missing check
-The exact validation that should exist but does not (e.g. `dim >= 0`,
-`offset + len <= buffer_size`, `axis < rank`).
+## 缺失的检查
+本应存在但实际不存在的确切校验（例如 `dim >= 0`、`offset + len <= buffer_size`、`axis < rank`）。
 
-## Proof of Concept
-- **PoC file:** `poc.<ext>` (AI-generated; describe what it constructs)
-- **Oracle:** ASAN / UBSAN / SIGSEGV / abort / invariant-violation (pick one)
+## 概念验证
+- **PoC file:** `poc.<ext>`（AI 生成；描述它构造了什么）
+- **Oracle:** ASAN / UBSAN / SIGSEGV / abort / invariant-violation（任选其一）
 - **Run:** `./run.sh`
-- **Evidence:** `evidence/run1.log`, `evidence/run2.log`, `evidence/run3.log`
-  (the oracle must fire deterministically across all three)
+- **Evidence:** `evidence/run1.log`、`evidence/run2.log`、`evidence/run3.log`
+  （oracle 必须在全部三次运行中确定性地触发）
 
 ```
-<paste the load-bearing lines of the sanitizer/oracle report, including the
-top app frame inside code/ — this is what proves the bug is real>
+<粘贴 sanitizer/oracle 报告中关键的几行，包括 code/ 内的顶层应用栈帧 —— 这正是证明该漏洞真实存在的依据>
 ```
 
-## Severity rationale
-Impact x exploitability under library context. Score: see `score.json` (recomputed by
-scripts: impact x clamped AV/AC/PR -> 0-10 band).
+## 严重性论证
+在库上下文下的影响 x 可利用性。评分：参见 `score.json`（由脚本重新计算：影响 x 钳制后的 AV/AC/PR -> 0-10 区间）。
 
-## Notes
-Anything the cross-validation panel flagged; why the red-team refutation failed.
+## 备注
+交叉验证小组标记出的任何内容；红队反驳为何未能成立。

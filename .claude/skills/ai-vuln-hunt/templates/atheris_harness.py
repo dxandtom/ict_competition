@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""atheris_harness.py — coverage-guided Python fuzzer template.
+"""atheris_harness.py — 覆盖率引导的 Python 模糊测试模板。
 
-Specialize the 3 SLOTS below from black-box reading of code/:
-  SLOT 1: import the target callable(s).
-  SLOT 2: build_input(fdp) — synthesize adversarial inputs for THIS API.
-  SLOT 3: EXPECTED — exceptions that are CONTRACTUAL (not findings). Keep tight.
+通过对 code/ 的黑盒阅读，定制下面 3 个 SLOT：
+  SLOT 1：导入目标可调用对象。
+  SLOT 2：build_input(fdp) —— 为本 API 合成对抗性输入。
+  SLOT 3：EXPECTED —— 属于契约约定（不算发现）的异常。保持范围收紧。
 
-Run via:  scripts/run_atheris.sh templates/atheris_harness.py --time 120
-A crash, SystemError, RecursionError, native abort/ASAN report, or an exception
-NOT in EXPECTED is a candidate finding. (Atheris re-raises so libFuzzer records it.)
+运行方式：  scripts/run_atheris.sh templates/atheris_harness.py --time 120
+崩溃、SystemError、RecursionError、原生 abort/ASAN 报告，或不在 EXPECTED
+中的异常，都是候选发现。（Atheris 会重新抛出，以便 libFuzzer 记录。）
 
-BLACK-BOX: never key behavior on project name/version; drive only by the API shape
-you observed in code/.
+黑盒：绝不要根据项目名称/版本来决定行为；只依据你在 code/ 中
+观察到的 API 形态来驱动。
 """
 import sys
 import atheris
 
 with atheris.instrument_imports():
-    # ---- SLOT 1: import the target ----------------------------------------
-    # e.g.  import target_pkg
+    # ---- SLOT 1：导入目标 ----------------------------------------
+    # 例如  import target_pkg
     #       fn = target_pkg.module.suspicious_op
     import importlib
     _modname = __import__("os").environ.get("FUZZ_TARGET_MODULE", "")
@@ -26,17 +26,17 @@ with atheris.instrument_imports():
     target_mod = importlib.import_module(_modname) if _modname else None
     fn = getattr(target_mod, _fnname) if (target_mod and _fnname) else None
 
-# Contractual exceptions that are NOT bugs (tighten per API).
-# ---- SLOT 3: EXPECTED ------------------------------------------------------
+# 属于契约约定、并非缺陷的异常（按 API 收紧）。
+# ---- SLOT 3：EXPECTED ------------------------------------------------------
 EXPECTED = (ValueError, TypeError, KeyError, IndexError, OverflowError, NotImplementedError)
-# Anything else (SystemError, RecursionError, MemoryError-from-tiny-input,
-# segfault/abort caught natively) is a finding.
+# 其他任何情况（SystemError、RecursionError、由极小输入引发的 MemoryError、
+# 原生捕获的 segfault/abort）都算一个发现。
 FINDING_EXC = (SystemError, RecursionError)
 
 
 def build_tensor_args(fdp):
-    """Synthesize adversarial ML/numeric inputs: rank 0-8, zero/huge/overflow dims,
-    full dtype zoo, NaN/inf, out-of-range axes. Returns a tuple of args."""
+    """合成对抗性的 ML/数值输入：秩 0-8、零/超大/溢出维度、
+    全套 dtype、NaN/inf、越界 axis。返回一个参数元组。"""
     rank = fdp.ConsumeIntInRange(0, 8)
     dims = []
     for _ in range(rank):
@@ -53,7 +53,7 @@ def build_tensor_args(fdp):
 
 
 def build_input(fdp):
-    # ---- SLOT 2: shape inputs for the chosen API ---------------------------
+    # ---- SLOT 2：为所选 API 构造输入 ---------------------------
     return build_tensor_args(fdp)
 
 
@@ -67,11 +67,11 @@ def TestOneInput(data):
               type("x", (), {"co_varnames": ()})).co_varnames}) \
             if hasattr(fn, "__code__") else fn(args)
     except FINDING_EXC:
-        raise  # definite finding
+        raise  # 确定的发现
     except EXPECTED:
-        return  # contractual
+        return  # 契约约定
     except Exception:
-        # Unexpected Python exception in code that should validate inputs -> candidate.
+        # 在本应校验输入的代码中出现意外的 Python 异常 -> 候选发现。
         raise
 
 

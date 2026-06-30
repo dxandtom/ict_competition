@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "VulnHunt confirmed finding",
-  "description": "A vulnerability finding. status MUST be CONFIRMED only when a PoC + oracle evidence exists; otherwise UNCONFIRMED and quarantined.",
+  "title": "VulnHunt 已确认的发现",
+  "description": "一项漏洞发现。仅当存在 PoC + oracle 证据时，status 才必须为 CONFIRMED；否则为 UNCONFIRMED 并被隔离。",
   "type": "object",
   "required": ["schema", "id", "title", "sink_class", "severity", "status"],
   "additionalProperties": true,
@@ -22,18 +22,18 @@
       "type": "object",
       "required": ["path", "kind"],
       "properties": {
-        "path": {"type": "string", "description": "AI-generated reproducer (relative to finding dir)"},
+        "path": {"type": "string", "description": "AI 生成的复现器（相对于 finding 目录）"},
         "kind": {"type": "string", "enum": ["atheris", "libfuzzer", "pytest", "property", "standalone", ""]}
       }
     },
     "evidence": {
       "type": "array",
-      "description": "deterministic run logs (>=1 required for CONFIRMED) proving the oracle fires",
+      "description": "证明 oracle 触发的确定性运行日志（CONFIRMED 时需要 >=1 条）",
       "items": {"type": "string"}
     },
     "oracle": {
       "type": "object",
-      "description": "triage_crash.sh output; oracle.confirmed must be true for CONFIRMED",
+      "description": "triage_crash.sh 的输出；CONFIRMED 时 oracle.confirmed 必须为 true",
       "properties": {
         "evidence_type": {"type": "string"},
         "signature": {"type": "string"},
@@ -44,13 +44,13 @@
       }
     },
     "cited_kernel": {"type": "string",
-      "description": "code/file:line of the kernel under test; REQUIRED for contract oracles (invariant/differential/metamorphic) since they have no native frame"},
+      "description": "被测内核的 code/file:line；对于契约型 oracle（invariant/differential/metamorphic）为必填项，因为它们没有原生栈帧"},
     "failing_input": {"type": "string",
-      "description": "path to the recorded minimal failing input / regression seed the PoC replays"},
+      "description": "PoC 重放所记录的最小失败输入 / 回归种子的路径"},
     "stubbed_symbols": {"type": "array", "items": {"type": "string"},
-      "description": "for libfuzzer single-unit builds: symbols replaced by weak stubs. NONE may lie on taint_path."},
+      "description": "用于 libfuzzer 单单元构建：被弱桩替换的符号。其中任何一个都不得位于 taint_path 上。"},
     "needs_real_build_confirmation": {"type": "boolean",
-      "description": "true if the PoC was produced against a stubbed/partial build and not yet re-confirmed against the real build"},
+      "description": "若 PoC 是针对打桩/部分构建生成的且尚未针对真实构建重新确认，则为 true"},
     "cvss": {"type": "object",
       "properties": {"score": {"type": "number"}, "vector": {"type": "string"}}},
     "references": {"type": "array", "items": {"type": "string"}},

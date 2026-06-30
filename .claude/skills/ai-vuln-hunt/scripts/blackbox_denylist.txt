@@ -1,9 +1,9 @@
-# blackbox_denylist.txt — well-known OSS project / library names.
-# DEFENSIVE ONLY: this list lets blackbox_guard.sh detect when an AI interaction accidentally
-# ASSERTS the host target's identity (e.g. "this is <name> 2.11"). It says nothing about what
-# the target actually is. A bare mention of any of these as a *dependency* is allowed (SCA);
-# only an identity assertion (or --strict prompt scanning) is blocked. Edit freely.
-# One lowercase token per line.
+# blackbox_denylist.txt — 知名开源项目/库名称列表。
+# 仅用于防御：此列表让 blackbox_guard.sh 能检测到 AI 交互何时意外地
+# 断言了宿主目标的身份（例如"这是 <name> 2.11"）。它并不说明目标
+# 实际是什么。仅作为*依赖项*出现的名称是允许的（SCA）；
+# 只有身份断言（或 --strict 提示词扫描）才会被拦截。可自由编辑。
+# 每行一个小写 token。
 tensorflow
 tflite
 tensorflow-lite

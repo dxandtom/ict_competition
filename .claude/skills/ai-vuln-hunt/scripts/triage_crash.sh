@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# triage_crash.sh — classify a crash/oracle log, compute a refactor-stable stack_hash
-# for dedup, and (optionally) minimize the crashing input.
+# triage_crash.sh — 对崩溃/oracle 日志进行分类，计算一个在重构后保持稳定的 stack_hash
+# 用于去重，并（可选地）最小化触发崩溃的输入。
 #
-# Recognizes: ASAN/UBSAN/MSAN reports, SIGSEGV/SIGFPE/SIGABRT, CHECK/assert/abort,
-# uncaught Python exceptions, and Python-oracle / differential-test violations.
-# No oracle match => evidence_type "none" and the finding stays UNCONFIRMED.
+# 可识别：ASAN/UBSAN/MSAN 报告、SIGSEGV/SIGFPE/SIGABRT、CHECK/assert/abort、
+# 未捕获的 Python 异常，以及 Python-oracle / 差分测试违规。
+# 没有任何 oracle 匹配时 => evidence_type 为 "none"，该发现保持 UNCONFIRMED 状态。
 #
-# Usage: triage_crash.sh <log_file> [--input CRASH_INPUT] [--binary BIN] [--minimize]
-# Prints a JSON triage object to stdout.
+# 用法: triage_crash.sh <log_file> [--input CRASH_INPUT] [--binary BIN] [--minimize]
+# 将一个 JSON triage 对象打印到 stdout。
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LOG="${1:?usage: triage_crash.sh <log_file> [--input F] [--binary B] [--minimize]}"; shift
@@ -54,29 +54,29 @@ elif match 'METAMORPHIC-VIOLATION'; then
 elif match 'INVARIANT-VIOLATION|ORACLE-VIOLATION'; then
   evidence="invariant_violation"; sink="contract"; cwe="CWE-682"; severity="MEDIUM"; signature="invariant_violation"
 elif match 'Traceback \(most recent call last\)'; then
-  # Uncaught Python exception — only counts if in code that must not throw (decided by reviewer).
+  # 未捕获的 Python 异常 —— 仅当处于绝不应抛出异常的代码中才计入（由审查者判定）。
   evidence="uncaught_exception"; sink="availability"; cwe="CWE-248"; severity="LOW"; signature="py-exception"
 fi
 
-# Extract top app frames (strip addresses, line-numbers, sanitizer/interpreter glue).
-# Anchor C++ frame source to end-of-line so signatures with spaces are not truncated.
+# 提取顶部的应用帧（去除地址、行号、sanitizer/解释器粘合代码）。
+# 将 C++ 帧的源信息锚定到行尾，使得带空格的签名不会被截断。
 FRAMES="$(printf '%s' "$TXT" \
   | grep -aE '#[0-9]+ ' \
   | sed -E 's/0x[0-9a-fA-F]+//g; s/\+0x[0-9a-fA-F]+//g; s/:[0-9]+:[0-9]+//g; s/:[0-9]+//g' \
   | grep -avE 'libclang_rt|sanitizer|__asan|__ubsan|_PyEval|ceval|atheris|libfuzzer|llvm|/usr/lib' \
   | grep -aoE 'in [^[:cntrl:]]+$' \
   | head -3 || true)"
-# stack_hash is computed from PATH-INDEPENDENT frames (file paths reduced to basenames) so it is
-# stable across machines/workdirs/build roots — only the symbol+basename identity matters. The raw
-# FRAMES (with paths) are kept for display and for the code/ membership test below.
+# stack_hash 是从“路径无关”的帧（文件路径缩减为 basename）计算得出的，因此它在
+# 不同机器/工作目录/构建根之间保持稳定 —— 只有符号+basename 的标识才重要。带路径的
+# 原始 FRAMES 被保留下来用于显示，以及用于下面的 code/ 成员检测。
 HASH_FRAMES="$(printf '%s' "$FRAMES" | sed -E 's#[^ ]*/([^/ ]+)$#\1#')"
 STACK_HASH="$(printf '%s' "$HASH_FRAMES" | sha256sum | awk '{print $1}')"
 
-# Gate policy differs by evidence class:
-#  - memory/signal/abort/check oracles MUST have a native crash frame inside code/ (not harness-only).
-#  - contract oracles (invariant/differential/metamorphic) raise a plain AssertionError in the test
-#    file: they have NO native frame, so they are gated instead on (recorded input + cited kernel
-#    file:line in the candidate + frozen-seed deterministic replay) — enforced by confirm_finding.sh.
+# Gate 策略因证据类别而异：
+#  - 内存/信号/abort/check 类 oracle 必须在 code/ 内部有一个原生崩溃帧（不能仅在 harness 中）。
+#  - 契约类 oracle（invariant/differential/metamorphic）在测试文件中抛出一个普通的
+#    AssertionError：它们没有原生帧，因此改为基于（记录的输入 + 候选中引用的内核
+#    file:line + 固定种子的确定性重放）来 gate —— 由 confirm_finding.sh 强制执行。
 case "$evidence" in
   asan|ubsan|msan|signal_segv|signal_fpe|abort|check_assert) REQ_NATIVE=true;;
   *) REQ_NATIVE=false;;
@@ -84,7 +84,7 @@ esac
 HAS_CODE_FRAME=false
 printf '%s' "$FRAMES" | grep -q 'code/' && HAS_CODE_FRAME=true
 
-# Minimize crashing input if requested and possible.
+# 如有请求且可行，则最小化触发崩溃的输入。
 MIN_INPUT=""
 if [ "$MIN" = 1 ] && [ -n "$INPUT" ] && [ -f "$INPUT" ] && [ -n "$BIN" ] && [ -x "$BIN" ]; then
   MINOUT="${INPUT}.min"

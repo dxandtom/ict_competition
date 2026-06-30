@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""sca_normalize.py — fold all SCA tool outputs into one canonical findings JSON.
+"""sca_normalize.py — 将所有 SCA 工具的输出合并为一份规范化的 findings JSON。
 
-BLACK-BOX NOTE: operates purely on (component, version, vuln_id) for THIRD-PARTY deps.
-No host-identity reasoning. Alias-aware cross-tool merging: e.g. grype's CVE-... and
-osv-scanner's GHSA-... for the same component coalesce into ONE finding carrying the
-canonical CVE id plus both detectors, raising confidence to "high".
+黑盒说明：仅基于第三方依赖的 (component, version, vuln_id) 进行处理。
+不做任何宿主身份推理。具备别名感知的跨工具合并能力：例如，对于同一组件，grype 的 CVE-... 与
+osv-scanner 的 GHSA-... 会合并为同一条 finding，携带规范化的 CVE id 及两个检测器，
+并将置信度提升为 "high"。
 
-Usage: sca_normalize.py <raw_dir> <vendored.json> > findings.json
-Output schema: {"schema_version":"sca-1.0","findings":[SCAFinding...],
+用法：sca_normalize.py <raw_dir> <vendored.json> > findings.json
+输出 schema：{"schema_version":"sca-1.0","findings":[SCAFinding...],
                 "vendored_unidentified":[...]}
-SCAFinding fields: id, aliases[], component, version, ecosystem, purl, severity,
+SCAFinding 字段：id, aliases[], component, version, ecosystem, purl, severity,
   cvss{score,vector}, summary, fixed_versions[], introduced, source_manifest,
   detectors[], confidence, references[], notes
 """
@@ -28,14 +28,14 @@ def load(path):
 
 
 def canon_id(ids):
-    """Prefer CVE id as canonical; keep the rest as aliases."""
+    """优先选用 CVE id 作为规范化 id；其余作为别名保留。"""
     cves = [i for i in ids if i.upper().startswith("CVE-")]
     return (cves[0] if cves else (ids[0] if ids else "")), sorted(set(ids))
 
 
 def add(acc, ids, comp, ver, eco, purl, sev, summary, fixed, det, manifest, refs, cvss):
     key_id, aliases = canon_id([i for i in ids if i])
-    # merge key: prefer canonical id; fall back to (component,version,any-alias)
+    # 合并键：优先使用规范化 id；否则回退到 (component,version,任一别名)
     mkey = None
     for existing in acc:
         if key_id and (key_id == existing["id"] or key_id in existing["aliases"]
@@ -52,7 +52,7 @@ def add(acc, ids, comp, ver, eco, purl, sev, summary, fixed, det, manifest, refs
             "confidence": "low", "references": refs or [], "notes": "",
         }
         acc.append(mkey)
-    # merge fields
+    # 合并各字段
     mkey["aliases"] = sorted(set(mkey["aliases"]) | set(aliases) | ({key_id} if key_id else set()))
     mkey["aliases"] = [a for a in mkey["aliases"] if a != mkey["id"]]
     for d in det:
@@ -79,7 +79,7 @@ def parse_osv(data, acc):
                 ids = [v.get("id", "")] + v.get("aliases", [])
                 sev = "UNKNOWN"
                 for s in v.get("severity", []):
-                    sev = "HIGH"  # OSV uses CVSS vectors; coarse map
+                    sev = "HIGH"  # OSV 使用 CVSS 向量；此处粗略映射
                 fixed = []
                 for af in v.get("affected", []):
                     for r in af.get("ranges", []):
