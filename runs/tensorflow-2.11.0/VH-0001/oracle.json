@@ -1,0 +1,17 @@
+{
+  "evidence_type": "check_assert",
+  "sink_class": "availability",
+  "cwe": "CWE-617",
+  "severity": "MEDIUM",
+  "signature": "check_assert",
+  "stack_hash": "ba13f10045db28c89a310748a7680a94bd0d175bb8b05cbbdcf4962c4b7aa6ea",
+  "top_frames": [
+    "tensorflow/tsl/platform/threadpool.cc:100"
+  ],
+  "crash_input": "",
+  "minimized_input": "",
+  "log": "<REPO>/findings/findings/VH-0001/evidence/run1.log",
+  "requires_native_frame": true,
+  "has_code_frame": true,
+  "confirmed": true
+}

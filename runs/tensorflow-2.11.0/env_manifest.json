@@ -1,0 +1,30 @@
+{
+  "schema": "manifest-1.0",
+  "created": "2026-07-01T02:14:47Z",
+  "session_id": "a4665ec421e60d33f763277a8b3f3c05d8535b1c01d35a2e30ae12530038f027",
+  "target_tree_sha256": "eaaa4150cd1e7364ad35a4592d0e91df9d8239afdfb69ea4d8f99ae20a9aa28b",
+  "source_file_count": 16658,
+  "target_tree_manifest": "target_tree_manifest.txt",
+  "os": "Linux vm 6.18.5 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux",
+  "tools": {
+    "python": "Python 3.11.15",
+    "clang": "Ubuntu clang version 18.1.3 (1ubuntu1)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "go": "go version go1.24.7 linux/amd64",
+    "semgrep": "absent",
+    "bandit": "absent",
+    "cppcheck": "absent",
+    "osv-scanner": "absent",
+    "syft": "absent"
+  },
+  "llm": {
+    "model": "claude-opus-4-8",
+    "temperature": 0
+  },
+  "reproducibility_note": "Tool inputs/outputs are content-addressed and replay deterministically. LLM calls are NOT bit-reproducible (no exposed sampling seed) but are fully logged (prompt+response blobs by sha256) and re-runnable; findings are PoC-gated, so a confirmed bug reproduces deterministically via its PoC regardless of which LLM run surfaced it.",
+  "identity_files_seen_but_unread": [
+    "code/AUTHORS",
+    "code/RELEASE.md",
+    "code/SECURITY.md"
+  ]
+}
