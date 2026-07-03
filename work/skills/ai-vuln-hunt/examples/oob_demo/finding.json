@@ -1,0 +1,52 @@
+{
+  "schema": "finding-1.0",
+  "id": "VH-0001",
+  "title": "oob-write-in-parser",
+  "sink_class": "oob_rw",
+  "severity": "HIGH",
+  "status": "CONFIRMED",
+  "cwe": "CWE-787/125",
+  "file": "code/vuln.c",
+  "line": 3,
+  "entry_point": "parse_and_store",
+  "taint_path": [],
+  "missing_check": "",
+  "poc": {
+    "path": "poc.c",
+    "kind": "standalone"
+  },
+  "evidence": [
+    "evidence/run1.log",
+    "evidence/run2.log",
+    "evidence/run3.log"
+  ],
+  "oracle": {
+    "evidence_type": "asan",
+    "sink_class": "oob_rw",
+    "cwe": "CWE-787/125",
+    "severity": "HIGH",
+    "signature": "asan-buffer-overflow",
+    "stack_hash": "26472e2b84e72da3c586635028972d9d1dd88c948f640aa0deb86cc2b9074999",
+    "top_frames": [
+      "in write_at <WORKDIR>/code/vuln.c",
+      "in parse_and_store <WORKDIR>/code/vuln.c",
+      "in main <WORKDIR>/poc.c"
+    ],
+    "crash_input": "",
+    "minimized_input": "",
+    "log": "<WORKDIR>/findings/findings/VH-0001/evidence/run1.log",
+    "requires_native_frame": true,
+    "has_code_frame": true,
+    "confirmed": true
+  },
+  "cited_kernel": "",
+  "failing_input": "",
+  "stubbed_symbols": [],
+  "needs_real_build_confirmation": false,
+  "cvss": {
+    "score": 0,
+    "vector": ""
+  },
+  "references": [],
+  "notes": ""
+}

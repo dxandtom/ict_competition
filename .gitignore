@@ -3,6 +3,8 @@
 # Generated audit trail / proof packages / reports.
 /findings/
 /findings_verify/
+/findings_run/
+/.venv_target/
 # SCA tool install + offline DB.
 /.sca/
 # Runtime venvs + downloaded target source used for real-target runs.
@@ -20,3 +22,4 @@ bazel-*
 *.min
 *.swp
 .DS_Store
+/work/STATUS.txt

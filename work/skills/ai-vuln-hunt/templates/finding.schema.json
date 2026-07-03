@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VulnHunt 已确认的发现",
+  "description": "一项漏洞发现。仅当存在 PoC + oracle 证据时，status 才必须为 CONFIRMED；否则为 UNCONFIRMED 并被隔离。",
+  "type": "object",
+  "required": ["schema", "id", "title", "sink_class", "severity", "status"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "finding-1.0"},
+    "id": {"type": "string", "pattern": "^VH-[0-9]{4}$"},
+    "title": {"type": "string"},
+    "sink_class": {"type": "string"},
+    "cwe": {"type": "string"},
+    "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]},
+    "status": {"type": "string", "enum": ["CONFIRMED", "UNCONFIRMED"]},
+    "file": {"type": "string"},
+    "line": {"type": "integer"},
+    "entry_point": {"type": "string"},
+    "taint_path": {"type": "array", "items": {"type": "object"}},
+    "missing_check": {"type": "string"},
+    "poc": {
+      "type": "object",
+      "required": ["path", "kind"],
+      "properties": {
+        "path": {"type": "string", "description": "AI 生成的复现器（相对于 finding 目录）"},
+        "kind": {"type": "string", "enum": ["atheris", "libfuzzer", "pytest", "property", "standalone", ""]}
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "证明 oracle 触发的确定性运行日志（CONFIRMED 时需要 >=1 条）",
+      "items": {"type": "string"}
+    },
+    "oracle": {
+      "type": "object",
+      "description": "triage_crash.sh 的输出；CONFIRMED 时 oracle.confirmed 必须为 true",
+      "properties": {
+        "evidence_type": {"type": "string"},
+        "signature": {"type": "string"},
+        "stack_hash": {"type": "string"},
+        "requires_native_frame": {"type": "boolean"},
+        "has_code_frame": {"type": "boolean"},
+        "confirmed": {"type": "boolean"}
+      }
+    },
+    "cited_kernel": {"type": "string",
+      "description": "被测内核的 code/file:line；对于契约型 oracle（invariant/differential/metamorphic）为必填项，因为它们没有原生栈帧"},
+    "failing_input": {"type": "string",
+      "description": "PoC 重放所记录的最小失败输入 / 回归种子的路径"},
+    "stubbed_symbols": {"type": "array", "items": {"type": "string"},
+      "description": "用于 libfuzzer 单单元构建：被弱桩替换的符号。其中任何一个都不得位于 taint_path 上。"},
+    "needs_real_build_confirmation": {"type": "boolean",
+      "description": "若 PoC 是针对打桩/部分构建生成的且尚未针对真实构建重新确认，则为 true"},
+    "cvss": {"type": "object",
+      "properties": {"score": {"type": "number"}, "vector": {"type": "string"}}},
+    "references": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "CONFIRMED"}}},
+      "then": {
+        "required": ["poc", "evidence", "oracle"],
+        "properties": {
+          "evidence": {"minItems": 1},
+          "oracle": {"required": ["confirmed"],
+                     "properties": {"confirmed": {"const": true}}}
+        }
+      }
+    }
+  ]
+}
