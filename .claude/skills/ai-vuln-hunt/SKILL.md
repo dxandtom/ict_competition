@@ -395,3 +395,38 @@ for b in "$FINDINGS"/blobs/*; do bash "$SKILL/scripts/blackbox_guard.sh" scan-fi
    在交付前用 `--strict` 扫描提示词数据块以及最终报告。
 3. **证明：** 没有触发机器可检测判定器的 AI 生成 PoC ⇒ `UNCONFIRMED`，绝不上报。
    状态由 `confirm_finding.sh` 决定，而非手动决定。
+
+## 11. Phase Deliverables (competition export)
+
+在 Report 阶段结束、发现已由门禁确认（`confirm_finding.sh` 通过、状态 `CONFIRMED`）之后，
+运行一条命令即可从 `findings/` 目录导出三份参赛交付物：
+
+```bash
+"$SKILL/scripts/make_deliverables.sh" <findings_dir> <out_dir>
+# 例：make_deliverables.sh findings/findings findings/deliverables
+```
+
+`<findings_dir>` 是直接包含 `VH-*/finding.json` 的目录；脚本会在该目录及其父目录中查找
+`ledger.jsonl`、`env_manifest.json`、`REPORT.md`。需要 `jq`；任一输入缺失时优雅降级（写占位或空历史），
+不会中断。产出（写入 `<out_dir>`）：
+
+- **`vulnerability_list.md`** — 逐条漏洞清单，由 `templates/vulnerability_list.md` 模板渲染。
+  字段取自每个 `finding.json`：**漏洞类型**（`sink_class` + `cwe`）、**严重级别**（`severity`
+  + `cvss.score`）、**问题源码路径**（`file:line`，附 `cited_kernel` sink）、**成因简述**
+  （`missing_check`）、**与 LLM 交互中哪句提示词发现了 bug**（`notes`，缺省时用薄算子封装通用提示词）、
+  **为什么选择此提示词**、**潜在业务危害**（按 `sink_class` 生成的 DoS/内存安全影响句）。
+- **`vulnerability_report.md`** — 人类可读报告，由 `findings/REPORT.md` 复制/重命名而来。
+- **`llm_chat_log.json`** — 主交付物是**审计模型的真实多轮对话**（`metadata`：`llm_model_used`、
+  `total_turns`=对话轮数、黑盒 `system_prompt`；`chat_history`：逐轮 `{turn, role, content}`，
+  忠实、可复现地重现黑盒发现过程：定策略 → 崩溃扫描 → 源码根因 → AI 生成 PoC）。
+  若 `<out_dir>` 已存在该文件，脚本会**校验并保留**它，同时把由 `ledger.jsonl` 还原的机器记录
+  写入 `llm_chat_log.ledger.json`（作为哈希链审计侧证）；若不存在，则以 ledger 还原稿作为初稿，
+  待用模型真实提示词/回复补全。全程经 `jq` 保证为合法 JSON。
+
+脚本结束会打印一份写入摘要（各文件状态、解析到的输入路径、发现条数）。
+
+**黑盒规则（同样适用于这三份交付物）**：脚本只读取 `finding.json` / `ledger.jsonl` /
+`env_manifest.json` / `REPORT.md`——它们本身已是黑盒产物（不含项目名/版本/CVE 断言）。导出物中
+**绝不**断言目标身份或版本、**绝不**引用任何 CVE 或“已知漏洞”。其中出现的 API/PoC 代码
+（如 `tf.raw_ops.*`）与源码文件路径均为**发现的客观事实**，属缺陷定位而非身份断言。
+身份文件（`AUTHORS`/`RELEASE.md`/`SECURITY.md`）始终仅按路径记录、内容未读。

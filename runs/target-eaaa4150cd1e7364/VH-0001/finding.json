@@ -57,5 +57,6 @@
     "vector": "AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
   },
   "references": [],
-  "notes": "black-box raw_ops sweep; root cause read from source"
+  "notes": "black-box raw_ops sweep; root cause read from source",
+  "validator_path": "tensorflow/core/kernels/data/experimental/threadpool_dataset_op.cc:47"
 }
