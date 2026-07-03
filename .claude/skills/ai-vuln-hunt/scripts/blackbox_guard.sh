@@ -15,7 +15,7 @@
 #   scan-file   : 硬关卡。若文本断言 HOST 身份/版本，或将某 CVE 关联到宿主，则以退出码 4 退出。
 #                 `--strict`（用于 prompt 文本块）还会拦截任何裸露的项目名称（NAME）。
 #                 默认模式（用于 REPORT.md）允许裸露的依赖名称通过，但仍会
-#                 拦截身份断言（ASSERTIONS）——即真正构成取消资格的结构。
+#                 拦截身份断言（ASSERTIONS）——即真正构成黑盒违规的结构。
 #
 # 用法：
 #   blackbox_guard.sh check-path  <path>            # exit 0 allowed, 3 denied
@@ -41,7 +41,7 @@ else
   NAMES='tensorflow|tflite|pytorch|torch|aten|caffe|caffe2|keras|jax|numpy|scipy|scikit-learn|sklearn|pandas|opencv|ffmpeg|libav|abseil|absl|eigen|protobuf|grpc|onnx|onnxruntime|mxnet|paddle|paddlepaddle|cntk|theano|llvm|boost|openssl|libpng|libjpeg|zlib|libxml2|libtiff|freetype|sqlite|curl|nginx|apache|django|flask|requests|pillow|lodash|log4j|spring|jackson|guava|netty'
 fi
 
-# ---- 身份断言正则（构成取消资格的结构），EN + ZH ----
+# ---- 身份断言正则（构成黑盒违规的结构），EN + ZH ----
 # 被禁止的是断言 HOST *就是*某个具名项目/版本——而不是
 # 裸露的（component, version）配对，后者正是允许的 SCA 依赖报告所产生的内容。
 # "<this/the/it's/the target/project/...> ... <is/appears/looks/seems/recognized> ... <name|vN.N>"

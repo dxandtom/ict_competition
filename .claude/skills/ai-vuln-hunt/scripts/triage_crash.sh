@@ -70,7 +70,22 @@ FRAMES="$(printf '%s' "$TXT" \
 # 不同机器/工作目录/构建根之间保持稳定 —— 只有符号+basename 的标识才重要。带路径的
 # 原始 FRAMES 被保留下来用于显示，以及用于下面的 code/ 成员检测。
 HASH_FRAMES="$(printf '%s' "$FRAMES" | sed -E 's#[^ ]*/([^/ ]+)$#\1#')"
+
+# 非 sanitizer 构建（如 pip 包）不打印 "#N" 原生回溯帧，而是打印 glog 风格的源位置
+# （例如 "F tensorflow/.../threadpool.cc:100] Check failed: ..."）或普通的 "path.ext:line"。
+# 提取这些源位置，并仅保留其文件确实存在于目标代码树（CODE_ROOT，默认 ./code）下的那些 ——
+# 这样 CHECK-fail/abort 的证据也能被证明确实位于 code/ 内部，而不依赖 ASAN 回溯格式。
+CODE_ROOT="${CODE_ROOT:-code}"
+CODE_SRCLOCS="$(printf '%s' "$TXT" | grep -aoE '[A-Za-z0-9_./-]+\.(cc|cpp|cxx|h|hpp|py):[0-9]+' | sort -u \
+  | while IFS= read -r loc; do fp="${loc%:*}"; case "$fp" in */*) { [ -f "$CODE_ROOT/$fp" ] || [ -f "$fp" ]; } && echo "$loc";; esac; done | head -3 || true)"
+
+# 若没有原生 #N 帧但有位于 code/ 内的源位置（CHECK-fail 情形），则用后者计算 stack_hash。
+if [ -z "$FRAMES" ] && [ -n "$CODE_SRCLOCS" ]; then
+  HASH_FRAMES="$(printf '%s' "$CODE_SRCLOCS" | sed -E 's#.*/##')"
+fi
 STACK_HASH="$(printf '%s' "$HASH_FRAMES" | sha256sum | awk '{print $1}')"
+# 用于显示的帧：优先原生帧，否则用 code/ 内的源位置。
+DISPLAY_FRAMES="$FRAMES"; [ -z "$DISPLAY_FRAMES" ] && DISPLAY_FRAMES="$CODE_SRCLOCS"
 
 # Gate 策略因证据类别而异：
 #  - 内存/信号/abort/check 类 oracle 必须在 code/ 内部有一个原生崩溃帧（不能仅在 harness 中）。
@@ -83,6 +98,7 @@ case "$evidence" in
 esac
 HAS_CODE_FRAME=false
 printf '%s' "$FRAMES" | grep -q 'code/' && HAS_CODE_FRAME=true
+[ -n "$CODE_SRCLOCS" ] && HAS_CODE_FRAME=true
 
 # 如有请求且可行，则最小化触发崩溃的输入。
 MIN_INPUT=""
@@ -96,7 +112,7 @@ if [ "$MIN" = 1 ] && [ -n "$INPUT" ] && [ -f "$INPUT" ] && [ -n "$BIN" ] && [ -x
 fi
 
 jq -n --arg ev "$evidence" --arg sink "$sink" --arg cwe "$cwe" --arg sev "$severity" \
-  --arg sig "$signature" --arg sh "$STACK_HASH" --arg frames "$FRAMES" \
+  --arg sig "$signature" --arg sh "$STACK_HASH" --arg frames "$DISPLAY_FRAMES" \
   --arg input "$INPUT" --arg min "$MIN_INPUT" --arg log "$LOG" \
   --argjson reqnative "$REQ_NATIVE" --argjson codeframe "$HAS_CODE_FRAME" \
   '{evidence_type:$ev, sink_class:$sink, cwe:$cwe, severity:$sev, signature:$sig,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# selftest.sh — 在竞赛运行前端到端地验证该 skill 的核心机制是否正常工作。
+# selftest.sh — 在正式运行前端到端地验证该 skill 的核心机制是否正常工作。
 # 测试内容：ledger 的 init/append/verify + 篡改检测、blackbox_guard，以及完整的证明
 # 闭环（构建一个真实的 ASAN 崩溃 -> 分诊 -> 生成 finding 脚手架 -> confirm_finding PASS），外加一个
 # 负向测试：一个伪造的 CONFIRMED finding 必须被降级。自包含；使用临时目录树。

@@ -2,8 +2,14 @@
 /code/
 # Generated audit trail / proof packages / reports.
 /findings/
+/findings_verify/
 # SCA tool install + offline DB.
 /.sca/
+# Runtime venvs + downloaded target source used for real-target runs.
+/.venv310/
+/.venvtools/
+/tf_src/
+.venv/
 # Python / build artifacts.
 __pycache__/
 *.pyc
