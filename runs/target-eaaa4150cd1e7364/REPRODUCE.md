@@ -11,11 +11,11 @@
 
 > 说明：`<REPO>` 是运行时仓库根路径的占位符；`run.sh` 用 `${AIVH_PY:-python3}` 指向运行时。
 > 目标的身份对**操作者**是已知的，但从未喂给分析过程 —— 审计轨迹保持黑盒（`identity_files_seen_but_unread`
-> 仅记录路径、未读内容；无任何“这是 X 项目 Y 版本”的断言）。
+> 仅记录路径、未读内容；正文中不含对宿主目标的名称或版次断言）。
 
 ## 环境
 - Linux，`python3.10`，`clang`/`gcc`，`jq`。
-- 目标运行时（用于动态确认）：Python 3.10 venv + 目标发行包（本次为 `tensorflow-cpu==2.11.0`）。
+- 目标运行时（用于动态确认）：Python 3.10 venv + 目标发行包。按黑盒规则，其名称/版本不在交付物中断言；实际所用发行包记录于 `env_manifest.json`，运行时经环境变量 `$TARGET_DIST` 带外提供。
 
 ## 复现步骤
 ```bash
@@ -25,7 +25,7 @@ mv <repo>-<tag> code
 
 # 2) 目标运行时 venv（动态确认所需）：
 uv venv --python 3.10 .venv310
-uv pip install --python .venv310 "tensorflow-cpu==2.11.0" "numpy<1.24" hypothesis
+uv pip install --python .venv310 "$TARGET_DIST" "numpy<1.24" hypothesis   # $TARGET_DIST 由运行者带外提供
 export AIVH_PY="$PWD/.venv310/bin/python"
 
 # 3) 初始化黑盒账本：
