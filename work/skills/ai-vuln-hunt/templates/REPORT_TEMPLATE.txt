@@ -1,0 +1,46 @@
+# 漏洞发现报告
+
+> 由 `ai-vuln-hunt` 技能生成。黑盒、证据驱动。只有经 PoC 确认的
+> 发现才会出现在第 3 节；其余一切均隔离标记为 UNCONFIRMED。
+
+## 1. 范围与方法
+- **目标：** 仅通过源码树内容哈希进行内容寻址（见
+  `env_manifest.json:target_tree_sha256`，基于 `target_tree_manifest.txt` 计算）。
+  目标的名称与版本从未被读取或使用（黑盒约定）。
+- **方法：** SCA（依赖 CVE 匹配） -> SAST（工具 + 基于 sink 分类法的
+  LLM 语义审查） -> 候选项分诊/去重 -> 多审计员交叉验证 ->
+  DAST/PoC 确认（Atheris + libFuzzer + 属性/差分测试） -> 评分。
+- **检测到的技术栈：** <python / C++ / Bazel / ... 自动检测>。
+- **优先排查的攻击面：** <列出你重点关注的高风险子树及原因>。
+
+## 2. 可复现性
+- 完整的哈希链交互账本：`ledger.jsonl`（用
+  `scripts/ledger.sh verify <findings_dir>` 验证 —— 链完整）。
+- 环境 + 精确的工具/模型版本：`env_manifest.json`。
+- 所有工具原始输出均原封不动地保存在 `raw/` 下；每条提示词/响应都是内容
+  寻址的 blob，保存在 `blobs/` 下。
+- 确定性（如实说明）：工具输入/输出可精确重放（内容寻址）；
+  LLM 步骤在 temperature 0 下运行且被完整记录，但不可逐位复现（未暴露
+  采样种子）。由于发现受 PoC 门控，每个已确认的发现都可用一条
+  命令复现，无论它是在哪一次运行中浮现的。
+
+## 3. 已确认发现（按严重性评分排序）
+| ID | Title | Sink | Severity | CWE | Oracle | Repro |
+|----|-------|------|----------|-----|--------|-------|
+| VH-0001 | ... | oob_rw | HIGH (8.1) | CWE-787 | ASAN | `findings/VH-0001/run.sh` |
+
+每个发现详见 `findings/VH-NNNN/`（finding.md + poc + 3 份证据日志 + oracle.json）。
+
+## 4. 未确认线索（无 PoC —— 仅作为线索报告，不作为漏洞）
+总结所怀疑的内容，以及为何无法产出 PoC（不可达、
+在别处被防护、被红队评审员驳回）。文件在 `unconfirmed/` 下。
+
+## 5. SCA 依赖暴露
+来自 `sbom/` + 规范化后的 `findings.json` 的过时/有漏洞的第三方依赖。
+这些是组件级别的（而非主机身份）。同时产出了 PoC 的高/中危行
+会被提升至第 3 节。
+
+## 6. 黑盒合规声明
+- 已见但未读的身份文件列于 `env_manifest.json:identity_files_seen_but_unread`。
+- 任何提示词、命令或账本记录都不包含关于宿主目标的项目名/版本/已知 CVE
+  推理（由 `blackbox_guard.sh` 强制执行并记录）。

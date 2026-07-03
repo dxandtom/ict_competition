@@ -1,0 +1,62 @@
+{
+  "schema": "finding-1.0",
+  "id": "VH-0001",
+  "title": "raw_ops.ThreadPoolHandle num_threads=0 reachable CHECK abort (DoS)",
+  "sink_class": "availability",
+  "severity": "MEDIUM",
+  "status": "CONFIRMED",
+  "cwe": "CWE-617",
+  "file": "tensorflow/tsl/platform/threadpool.cc",
+  "line": 100,
+  "entry_point": "tf.raw_ops.ThreadPoolHandle (also ExperimentalThreadPoolHandle)",
+  "taint_path": [
+    {
+      "file": "tensorflow/core/kernels/data/experimental/threadpool_dataset_op.cc",
+      "line": 47,
+      "note": "ValidateNumThreads rejects <0 and >=kThreadLimit but ACCEPTS 0"
+    },
+    {
+      "file": "tensorflow/tsl/platform/threadpool.cc",
+      "line": 100,
+      "note": "ThreadPool ctor CHECK_GE(num_threads,1) aborts"
+    }
+  ],
+  "missing_check": "ValidateNumThreads allows 0 while ThreadPool requires >=1; fatal CHECK instead of returnable error",
+  "poc": {
+    "path": "poc.py",
+    "kind": "standalone"
+  },
+  "evidence": [
+    "evidence/run1.log",
+    "evidence/run2.log",
+    "evidence/run3.log"
+  ],
+  "oracle": {
+    "evidence_type": "check_assert",
+    "sink_class": "availability",
+    "cwe": "CWE-617",
+    "severity": "MEDIUM",
+    "signature": "check_assert",
+    "stack_hash": "ba13f10045db28c89a310748a7680a94bd0d175bb8b05cbbdcf4962c4b7aa6ea",
+    "top_frames": [
+      "tensorflow/tsl/platform/threadpool.cc:100"
+    ],
+    "crash_input": "",
+    "minimized_input": "",
+    "log": "<REPO>/findings/findings/VH-0001/evidence/run1.log",
+    "requires_native_frame": true,
+    "has_code_frame": true,
+    "confirmed": true
+  },
+  "cited_kernel": "tensorflow/tsl/platform/threadpool.cc:100",
+  "failing_input": "",
+  "stubbed_symbols": [],
+  "needs_real_build_confirmation": false,
+  "cvss": {
+    "score": 4.0,
+    "vector": "AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+  },
+  "references": [],
+  "notes": "black-box raw_ops sweep; root cause read from source",
+  "validator_path": "tensorflow/core/kernels/data/experimental/threadpool_dataset_op.cc:47"
+}

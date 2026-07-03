@@ -1,0 +1,66 @@
+{
+  "schema": "finding-1.0",
+  "id": "VH-0002",
+  "title": "raw_ops.RecordInput file_parallelism int64->int32 narrowing -> negative threads -> CHECK abort",
+  "sink_class": "int_overflow",
+  "severity": "MEDIUM",
+  "status": "CONFIRMED",
+  "cwe": "CWE-197/CWE-617",
+  "file": "tensorflow/core/kernels/record_input_op.cc",
+  "line": 37,
+  "entry_point": "tf.raw_ops.RecordInput(file_parallelism=2**31) - public op",
+  "taint_path": [
+    {
+      "file": "tensorflow/core/kernels/record_input_op.cc",
+      "line": 37,
+      "note": "file_parallelism read as int64_t (no upper bound / no >0 check)"
+    },
+    {
+      "file": "tensorflow/core/kernels/record_input_op.cc",
+      "line": 49,
+      "note": "yopts.parallelism = file_parallelism (int64) passed downstream"
+    },
+    {
+      "file": "tensorflow/tsl/platform/threadpool.cc",
+      "line": 100,
+      "note": "narrowed to int32 -> -2147483647; ThreadPool CHECK_GE(num_threads,1) aborts process"
+    }
+  ],
+  "missing_check": "file_parallelism accepted as int64 with no positive/upper-bound validation; narrowed to int32 thread count downstream, wrapping negative",
+  "poc": {
+    "path": "poc.py",
+    "kind": "standalone"
+  },
+  "evidence": [
+    "evidence/run1.log",
+    "evidence/run2.log",
+    "evidence/run3.log"
+  ],
+  "oracle": {
+    "evidence_type": "check_assert",
+    "sink_class": "availability",
+    "cwe": "CWE-617",
+    "severity": "MEDIUM",
+    "signature": "check_assert",
+    "stack_hash": "ba13f10045db28c89a310748a7680a94bd0d175bb8b05cbbdcf4962c4b7aa6ea",
+    "top_frames": [
+      "tensorflow/tsl/platform/threadpool.cc:100"
+    ],
+    "crash_input": "",
+    "minimized_input": "",
+    "log": "<REPO>/findings/findings/VH-0002/evidence/run1.log",
+    "requires_native_frame": true,
+    "has_code_frame": true,
+    "confirmed": true
+  },
+  "cited_kernel": "tensorflow/tsl/platform/threadpool.cc:100",
+  "failing_input": "",
+  "stubbed_symbols": [],
+  "needs_real_build_confirmation": false,
+  "cvss": {
+    "score": 4.0,
+    "vector": "AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+  },
+  "references": [],
+  "notes": "Distinct from VH-0001: integer narrowing (not the 0 boundary). Discovered black-box via raw_ops sweep (strat with 2**31); root cause read from source."
+}
